@@ -161,7 +161,7 @@ static void stateflow_switch(stateflow_s_t *stateflow)
         if (true == stateflow->state_list[stateflow->now_state].exit_events[i].event_triggering_state)
         {
             // 重置出口事件的触发状态
-            stateflow->state_list[stateflow->now_state].exit_events[i].event_triggering_state == false;
+            stateflow->state_list[stateflow->now_state].exit_events[i].event_triggering_state = false;
 
             // 若仅有一个事件被触发，则将该事件的指向状态设为下一状态
             // 若多个事件被触发，则将所有触发的事件中最高优先级事件的指向状态设为下一状态
