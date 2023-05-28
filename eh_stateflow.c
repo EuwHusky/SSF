@@ -1,10 +1,54 @@
+/**
+ * @file    eh_stateflow.c/h
+ * @brief   一个简易状态机
+ * @note    happyhappyhappy
+ * @authors A HUSKY & his friends
+ */
+
 #include "eh_stateflow.h"
 
+/**
+ * @name    stateflow_execute
+ * @brief   状态机 执行
+ * @param   stateflow   状态机结构体地址
+ * @return  void
+ * @note    状态内部调用
+ */
 static void stateflow_execute(stateflow_s_t *stateflow);
+/**
+ * @name    stateflow_guard
+ * @brief   状态机 检测事件触发状态
+ * @param   stateflow   状态机结构体地址
+ * @return  void
+ * @note    状态内部调用
+ */
 static void stateflow_guard(stateflow_s_t *stateflow);
+/**
+ * @name    stateflow_switch
+ * @brief   状态机 状态切换
+ * @param   stateflow   状态机结构体地址
+ * @return  void
+ * @note    状态内部调用
+ */
 static void stateflow_switch(stateflow_s_t *stateflow);
+/**
+ * @name    stateflow_state_entry_reset
+ * @brief   重置下一个进入的状态
+ * @param   stateflow   状态机结构体地址
+ * @param   next_state  下一个状态
+ * @return  void
+ * @note    状态内部调用
+ */
 static void stateflow_state_entry_reset(stateflow_s_t *stateflow, stateflow_state_table_e_t next_state);
 
+/**
+ * @name    EHSF_Init
+ * @brief   状态机初始化
+ * @param stateflow     状态机结构体地址
+ * @param initial_state 状态机系统初始状态
+ * @return  stateflow_error
+ * @note    无
+ */
 stateflow_error EHSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t initial_state)
 {
     // 参数检查
@@ -21,11 +65,24 @@ stateflow_error EHSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t in
     stateflow->now_state = initial_state;
 
     // 初始化系统步进时钟
-    stateflow->step_clock = 0;
+    stateflow->message_box.step_clock = 0;
 
     return stateflow->status = OK, stateflow->status;
 }
 
+/**
+ * @name    EHSF_CreateState
+ * @brief   创建一个状态
+ * @param stateflow             状态机结构体地址
+ * @param state_name            此状态的名称/枚举值
+ * @param number_of_exit_events 此状态拥有的出口事件总数
+ * @param is_need_to_reset      此状态在进入时是否需要重置
+ * @param entry                 此状态进入时方法
+ * @param during                此状态执行时方法
+ * @param exit                  此状态退出时方法
+ * @return  stateflow_error
+ * @note    无
+ */
 stateflow_error EHSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
                                  uint8_t number_of_exit_events, bool is_need_to_reset,
                                  void (*entry)(stateflow_message_box_s_t *stateflow_msg),
@@ -69,6 +126,17 @@ stateflow_error EHSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table
     return stateflow->status = OK, stateflow->status;
 }
 
+/**
+ * @name    EHSF_StateAddExitEvent
+ * @brief   为状态添加一个出口事件
+ * @param stateflow     状态机结构体地址
+ * @param state_name    所属状态的名称/枚举值
+ * @param toward_state  此出口事件指向的状态
+ * @param priority      此出口事件的触发优先级
+ * @param guard         此出口事件的检测方法
+ * @return  stateflow_error
+ * @note    无
+ */
 stateflow_error EHSF_StateAddExitEvent(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
                                        stateflow_state_table_e_t toward_state, uint8_t priority,
                                        bool (*guard)(stateflow_message_box_s_t *stateflow_msg))
@@ -113,6 +181,13 @@ stateflow_error EHSF_StateAddExitEvent(stateflow_s_t *stateflow, stateflow_state
     return stateflow->status = OK, stateflow->status;
 }
 
+/**
+ * @name    EHSF_Step
+ * @brief   状态机执行一个步进周期
+ * @param stateflow     状态机结构体地址
+ * @return  void
+ * @note    无
+ */
 void EHSF_Step(stateflow_s_t *stateflow)
 {
     // 执行
@@ -125,13 +200,20 @@ void EHSF_Step(stateflow_s_t *stateflow)
     stateflow_switch(stateflow);
 
     // 系统步进时钟更新
-    stateflow->step_clock++;
-    if (stateflow->step_clock > CLOCK_MAX_LIMIT)
+    stateflow->message_box.step_clock++;
+    if (stateflow->message_box.step_clock > CLOCK_MAX_LIMIT)
     {
-        stateflow->step_clock = CLOCK_MAX_LIMIT;
+        stateflow->message_box.step_clock = CLOCK_MAX_LIMIT;
     }
 }
 
+/**
+ * @name    stateflow_execute
+ * @brief   状态机 执行
+ * @param   stateflow   状态机结构体地址
+ * @return  void
+ * @note    状态内部调用
+ */
 static void stateflow_execute(stateflow_s_t *stateflow)
 {
     // 执行状态执行时方法
@@ -141,6 +223,14 @@ static void stateflow_execute(stateflow_s_t *stateflow)
     // 更新状态持续时间
     stateflow->state_list[stateflow->now_state].uptime++;
 }
+
+/**
+ * @name    stateflow_guard
+ * @brief   状态机 检测事件触发状态
+ * @param   stateflow   状态机结构体地址
+ * @return  void
+ * @note    状态内部调用
+ */
 static void stateflow_guard(stateflow_s_t *stateflow)
 {
     // 更新所有已设置的出口事件的触发状态
@@ -150,6 +240,14 @@ static void stateflow_guard(stateflow_s_t *stateflow)
             stateflow->state_list[stateflow->now_state].exit_events[i].guard(&stateflow->message_box);
     }
 }
+
+/**
+ * @name    stateflow_switch
+ * @brief   状态机 状态切换
+ * @param   stateflow   状态机结构体地址
+ * @return  void
+ * @note    状态内部调用
+ */
 static void stateflow_switch(stateflow_s_t *stateflow)
 {
     stateflow_state_table_e_t next_state = stateflow->now_state;
@@ -200,6 +298,15 @@ static void stateflow_switch(stateflow_s_t *stateflow)
             stateflow->state_list[next_state].entry(&stateflow->message_box);
     }
 }
+
+/**
+ * @name    stateflow_state_entry_reset
+ * @brief   重置下一个进入的状态
+ * @param   stateflow   状态机结构体地址
+ * @param   next_state  下一个状态
+ * @return  void
+ * @note    状态内部调用
+ */
 static void stateflow_state_entry_reset(stateflow_s_t *stateflow, stateflow_state_table_e_t next_state)
 {
     if (stateflow->state_list[next_state].is_need_to_reset)
