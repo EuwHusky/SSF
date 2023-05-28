@@ -1,3 +1,10 @@
+/**
+ * @file    eh_stateflow.c/h
+ * @brief   一个简易状态机
+ * @note    happyhappyhappy
+ * @authors A HUSKY & his friends
+ */
+
 #ifndef __STATEFLOW_H_
 #define __STATEFLOW_H_
 
