@@ -1,12 +1,41 @@
 /**
- * @file    eh_stateflow.c/h
- * @brief   一个简易状态机
+ ******************************************************************************
+ * @file    simple_stateflow.c/h
+ * @author  Enoky Bertram
+ * @version V2.0.0
+ * @date    Jun.4.2023
+ * @brief   A Simple State Flow Switcher /一个简易状态切换器
  * @note    happyhappyhappy
- * @authors A HUSKY & his friends
+ ******************************************************************************
+ * @example
+ * Please see demo. c
+ * 请见demo.c
+ *
+ * @attention
+ * 1. Every operation of initializing of the stateflow will return error codes. If the state machine cannot
+ *    run, please check immediately if any error codes other than OK are returned during initialization.
+ *    状态机初始化的所有操作都会返回错误码，如果状态机运行不了请第一时间检查在初始化时是否有返回任何除了OK以外的错误码。
+ *
+ * 2. When there is an error in the running result of the stateflow, please check immediately whether the
+ *    corresponding method function was added incorrectly during initialization.
+ *    当状态机运行结果有误时，请第一时间检查初始化时对应的方法函数是否添加有误。
+ *
+ * 3. When a certain state cannot be entered, please refer to the previous item, then check if the number of
+ *    exit events in the previous state is configured correctly. The same goes for not being able to exit
+ *    current state.
+ *    当某一状态无法进入时，请参见上一条，然后检查该状态的上一状态的出口事件数量是否配置正确。无法退出状态同理。
+ ******************************************************************************
  */
 
-#include "eh_stateflow.h"
+#include "simple_stateflow.h"
 
+/**
+ * @name    stateflow_execute
+ * @brief   stateflow executing the current state
+ * @param   stateflow   stateflow structure pointer
+ * @return  void
+ * @note    State internal call
+ */
 /**
  * @name    stateflow_execute
  * @brief   状态机 执行
@@ -15,14 +44,30 @@
  * @note    状态内部调用
  */
 static void stateflow_execute(stateflow_s_t *stateflow);
+
+/**
+ * @name    stateflow_guard
+ * @brief   stateflow detect event triggering status
+ * @param   stateflow   stateflow structure pointer
+ * @return  void
+ * @note    State internal call
+ */
 /**
  * @name    stateflow_guard
  * @brief   状态机 检测事件触发状态
- * @param   stateflow   状态机结构体地址
+ * @param   stateflow   stateflow structure pointer
  * @return  void
  * @note    状态内部调用
  */
 static void stateflow_guard(stateflow_s_t *stateflow);
+
+/**
+ * @name    stateflow_switch
+ * @brief   stateflow state switching
+ * @param   stateflow   stateflow structure pointer
+ * @return  void
+ * @note    State internal call
+ */
 /**
  * @name    stateflow_switch
  * @brief   状态机 状态切换
@@ -31,6 +76,15 @@ static void stateflow_guard(stateflow_s_t *stateflow);
  * @note    状态内部调用
  */
 static void stateflow_switch(stateflow_s_t *stateflow);
+
+/**
+ * @name    stateflow_state_entry_reset
+ * @brief   reset the next entered state
+ * @param   stateflow   stateflow structure pointer
+ * @param   next_state  next state
+ * @return  void
+ * @note    State internal call
+ */
 /**
  * @name    stateflow_state_entry_reset
  * @brief   重置下一个进入的状态
@@ -42,14 +96,24 @@ static void stateflow_switch(stateflow_s_t *stateflow);
 static void stateflow_state_entry_reset(stateflow_s_t *stateflow, stateflow_state_table_e_t next_state);
 
 /**
- * @name    EHSF_Init
+ * @name    SSF_Init
+ * @brief   stateflow initialization
+ * @param stateflow     stateflow structure pointer
+ * @param initial_state initial state of stateflow system
+ * @return  stateflow_error
+ * @example SSF_Init(&test_state_flow, TEST_1);
+ * @note    none
+ */
+/**
+ * @name    SSF_Init
  * @brief   状态机初始化
  * @param stateflow     状态机结构体地址
  * @param initial_state 状态机系统初始状态
  * @return  stateflow_error
+ * @example SSF_Init(&test_state_flow, TEST_1);
  * @note    无
  */
-stateflow_error EHSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t initial_state)
+stateflow_error SSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t initial_state)
 {
     // 参数检查
     if ((initial_state == STATE_NULL) || (initial_state == NUM_OF_STATE))
@@ -59,7 +123,8 @@ stateflow_error EHSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t in
     stateflow->state_list = NULL;
     stateflow->state_list = (stateflow_state_s_t *)malloc(NUM_OF_STATE * sizeof(stateflow_state_s_t));
     if (stateflow->state_list == NULL)
-        return stateflow->status = STATEFLOW_INIT_MALLOC_ERROR, stateflow->status;
+        return stateflow->status = STATEFLOW_INIT_STATELIST_MALLOC_ERROR, stateflow->status;
+    memset(stateflow->state_list, 0, NUM_OF_STATE * sizeof(stateflow_state_s_t));
 
     // 设置系统初始状态
     stateflow->now_state = initial_state;
@@ -67,11 +132,32 @@ stateflow_error EHSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t in
     // 初始化系统步进时钟
     stateflow->message_box.step_clock = 0;
 
+    // 初始化状态持续时间
+    stateflow->message_box.uptime = NULL;
+    stateflow->message_box.uptime = (uint32_t *)malloc(NUM_OF_STATE * sizeof(uint32_t));
+    if (stateflow->message_box.uptime == NULL)
+        return stateflow->status = STATEFLOW_INIT_UPTIME_MALLOC_ERROR, stateflow->status;
+    memset(stateflow->message_box.uptime, 0, NUM_OF_STATE * sizeof(uint32_t));
+
     return stateflow->status = OK, stateflow->status;
 }
 
 /**
- * @name    EHSF_CreateState
+ * @name    SSF_CreateState
+ * @brief   create a state
+ * @param stateflow             stateflow structure pointer
+ * @param state_name            the name/enumeration value for this state
+ * @param number_of_exit_events the total number of exit events owned by this state
+ * @param is_need_to_reset      does this state need to be reset upon entry
+ * @param entry                 Method when entering this state
+ * @param during                Method when executing in this state
+ * @param exit                  Method when exiting this state
+ * @return  stateflow_error
+ * @example SSF_CreateState(&test_state_flow, TEST_1, 1, false, entry_test_1, during_test_1, STATE_METHOD_NULL);
+ * @note    none
+ */
+/**
+ * @name    SSF_CreateState
  * @brief   创建一个状态
  * @param stateflow             状态机结构体地址
  * @param state_name            此状态的名称/枚举值
@@ -81,13 +167,14 @@ stateflow_error EHSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t in
  * @param during                此状态执行时方法
  * @param exit                  此状态退出时方法
  * @return  stateflow_error
+ * @example SSF_CreateState(&test_state_flow, TEST_1, 1, false, entry_test_1, during_test_1, STATE_METHOD_NULL);
  * @note    无
  */
-stateflow_error EHSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
-                                 uint8_t number_of_exit_events, bool is_need_to_reset,
-                                 void (*entry)(stateflow_message_box_s_t *stateflow_msg),
-                                 void (*during)(stateflow_message_box_s_t *stateflow_msg),
-                                 void (*exit)(stateflow_message_box_s_t *stateflow_msg))
+stateflow_error SSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
+                                uint8_t number_of_exit_events, bool is_need_to_reset,
+                                void (*entry)(stateflow_message_box_s_t *stateflow_msg),
+                                void (*during)(stateflow_message_box_s_t *stateflow_msg),
+                                void (*exit)(stateflow_message_box_s_t *stateflow_msg))
 {
     /*状态机运行状态检查*/
     if (stateflow->status != OK)
@@ -121,13 +208,24 @@ stateflow_error EHSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table
 
     /*设置状态运行数据*/
     stateflow->state_list[state_name].is_need_to_reset = is_need_to_reset; // 设置进入状态时是否需要重置状态运行数据
-    stateflow->state_list[state_name].uptime = 0;
 
     return stateflow->status = OK, stateflow->status;
 }
 
 /**
- * @name    EHSF_StateAddExitEvent
+ * @name    SSF_StateAddExitEvent
+ * @brief   add an exit event for this state
+ * @param stateflow     stateflow structure pointer
+ * @param state_name    name/enumeration value of the state to which it belongs
+ * @param toward_state  the state pointed to by this exit event
+ * @param priority      the triggering priority of this exit event
+ * @param guard         the detection method for this exit event
+ * @return  stateflow_error
+ * @example SSF_StateAddExitEvent(&test_state_flow, TEST_1, TEST_2, 0, guard_test_1_to_test_2);
+ * @note    none
+ */
+/**
+ * @name    SSF_StateAddExitEvent
  * @brief   为状态添加一个出口事件
  * @param stateflow     状态机结构体地址
  * @param state_name    所属状态的名称/枚举值
@@ -135,11 +233,12 @@ stateflow_error EHSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table
  * @param priority      此出口事件的触发优先级
  * @param guard         此出口事件的检测方法
  * @return  stateflow_error
+ * @example SSF_StateAddExitEvent(&test_state_flow, TEST_1, TEST_2, 0, guard_test_1_to_test_2);
  * @note    无
  */
-stateflow_error EHSF_StateAddExitEvent(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
-                                       stateflow_state_table_e_t toward_state, uint8_t priority,
-                                       bool (*guard)(stateflow_message_box_s_t *stateflow_msg))
+stateflow_error SSF_StateAddExitEvent(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
+                                      stateflow_state_table_e_t toward_state, uint8_t priority,
+                                      bool (*guard)(stateflow_message_box_s_t *stateflow_msg))
 {
     // 状态机运行状态检查
     if (stateflow->status != OK)
@@ -182,13 +281,22 @@ stateflow_error EHSF_StateAddExitEvent(stateflow_s_t *stateflow, stateflow_state
 }
 
 /**
- * @name    EHSF_Step
+ * @name    SSF_Step
+ * @brief   stateflow executes a step cycle
+ * @param stateflow     stateflow structure pointer
+ * @return  void
+ * @example SSF_Step(&test_state_flow);
+ * @note    none
+ */
+/**
+ * @name    SSF_Step
  * @brief   状态机执行一个步进周期
  * @param stateflow     状态机结构体地址
  * @return  void
+ * @example SSF_Step(&test_state_flow);
  * @note    无
  */
-void EHSF_Step(stateflow_s_t *stateflow)
+void SSF_Step(stateflow_s_t *stateflow)
 {
     // 执行
     stateflow_execute(stateflow);
@@ -209,6 +317,13 @@ void EHSF_Step(stateflow_s_t *stateflow)
 
 /**
  * @name    stateflow_execute
+ * @brief   stateflow executing the current state
+ * @param   stateflow   stateflow structure pointer
+ * @return  void
+ * @note    State internal call
+ */
+/**
+ * @name    stateflow_execute
  * @brief   状态机 执行
  * @param   stateflow   状态机结构体地址
  * @return  void
@@ -221,13 +336,20 @@ static void stateflow_execute(stateflow_s_t *stateflow)
         stateflow->state_list[stateflow->now_state].during(&stateflow->message_box);
 
     // 更新状态持续时间
-    stateflow->state_list[stateflow->now_state].uptime++;
+    stateflow->message_box.uptime[stateflow->now_state]++;
 }
 
 /**
  * @name    stateflow_guard
+ * @brief   stateflow detect event triggering status
+ * @param   stateflow   stateflow structure pointer
+ * @return  void
+ * @note    State internal call
+ */
+/**
+ * @name    stateflow_guard
  * @brief   状态机 检测事件触发状态
- * @param   stateflow   状态机结构体地址
+ * @param   stateflow   stateflow structure pointer
  * @return  void
  * @note    状态内部调用
  */
@@ -241,6 +363,13 @@ static void stateflow_guard(stateflow_s_t *stateflow)
     }
 }
 
+/**
+ * @name    stateflow_switch
+ * @brief   stateflow state switching
+ * @param   stateflow   stateflow structure pointer
+ * @return  void
+ * @note    State internal call
+ */
 /**
  * @name    stateflow_switch
  * @brief   状态机 状态切换
@@ -301,6 +430,14 @@ static void stateflow_switch(stateflow_s_t *stateflow)
 
 /**
  * @name    stateflow_state_entry_reset
+ * @brief   reset the next entered state
+ * @param   stateflow   stateflow structure pointer
+ * @param   next_state  next state
+ * @return  void
+ * @note    State internal call
+ */
+/**
+ * @name    stateflow_state_entry_reset
  * @brief   重置下一个进入的状态
  * @param   stateflow   状态机结构体地址
  * @param   next_state  下一个状态
@@ -312,6 +449,7 @@ static void stateflow_state_entry_reset(stateflow_s_t *stateflow, stateflow_stat
     if (stateflow->state_list[next_state].is_need_to_reset)
     {
         // 重置此状态的运行数据
-        stateflow->state_list[next_state].uptime = 0; // 状态持续时间
+        stateflow->message_box.uptime[stateflow->now_state] = 0; // 状态持续时间
+        // stateflow->state_list[next_state].uptime = 0;            // 状态持续时间
     }
 }

@@ -1,8 +1,12 @@
 /**
- * @file    eh_stateflow.c/h
- * @brief   一个简易状态机
+ ******************************************************************************
+ * @file    simple_stateflow.c/h
+ * @author  Enoky Bertram form Earth
+ * @version V2.0.0
+ * @date    Jun.4.2023
+ * @brief   A Simple State Flow Switcher /一个简易状态切换器
  * @note    happyhappyhappy
- * @authors A HUSKY & his friends
+ ******************************************************************************
  */
 
 #ifndef __STATEFLOW_H_
@@ -14,7 +18,9 @@
 #include <stdlib.h>
 
 /*在下面这里添加自定义头文件*/
+
 #include <windows.h>
+
 /*在上面这里添加自定义头文件*/
 
 typedef enum StateFlowStateTable
@@ -22,9 +28,11 @@ typedef enum StateFlowStateTable
     STATE_NULL = 0,
 
     /*在下面这里添加自定义状态*/
+
     TEST_1,
     TEST_2,
     TEST_3,
+
     /*在上面这里添加自定义状态*/
 
     NUM_OF_STATE, // 保持在最后一个，不可删除
@@ -33,13 +41,18 @@ typedef enum StateFlowStateTable
 typedef struct StateFlowDataBox
 {
     uint32_t step_clock; // 系统步进时钟
+    uint32_t *uptime;    // 状态持续时间
     /*在下面这里添加自定义数据*/
+
     int test;
+
     /*在上面这里添加自定义数据*/
 } stateflow_message_box_s_t;
 
 /*在下面这里添加自定义数据宏*/
-#define EHSF_MSG stateflow_msg // 状态机信箱指针
+
+#define SSF_MSG stateflow_msg // 状态机信箱指针
+
 /*在上面这里添加自定义数据宏*/
 
 #define CLOCK_MAX_LIMIT 4294967290 // 步进时钟上限
@@ -79,7 +92,6 @@ typedef struct StateFlowState
 
     /*状态运行数据*/
     bool is_need_to_reset; // 进入状态时是否需要重置状态运行数据
-    uint32_t uptime;       // 状态持续时间
 } stateflow_state_s_t;
 
 #define STATE_METHOD_NULL NULL // 空方法
@@ -91,7 +103,8 @@ typedef enum StateFlowError
 {
     OK = 0,
     STATEFLOW_INIT_INPUT_ERROR,
-    STATEFLOW_INIT_MALLOC_ERROR,
+    STATEFLOW_INIT_STATELIST_MALLOC_ERROR,
+    STATEFLOW_INIT_UPTIME_MALLOC_ERROR,
     STATE_CREATE_INPUT_ERROR,
     STATE_CREATE_MALLOC_ERROR,
     EXIT_EVENT_ADD_INPUT_ERROR,
@@ -114,17 +127,18 @@ typedef struct StateFlow
 } stateflow_s_t;
 
 /**
- * @name    EHSF_Init
+ * @name    SSF_Init
  * @brief   状态机初始化
  * @param stateflow     状态机结构体地址
  * @param initial_state 状态机系统初始状态
  * @return  stateflow_error
+ * @example SSF_Init(&test_state_flow, TEST_1);
  * @note    无
  */
-stateflow_error EHSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t initial_state);
+stateflow_error SSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t initial_state);
 
 /**
- * @name    EHSF_CreateState
+ * @name    SSF_CreateState
  * @brief   创建一个状态
  * @param stateflow             状态机结构体地址
  * @param state_name            此状态的名称/枚举值
@@ -134,16 +148,17 @@ stateflow_error EHSF_Init(stateflow_s_t *stateflow, stateflow_state_table_e_t in
  * @param during                此状态执行时方法
  * @param exit                  此状态退出时方法
  * @return  stateflow_error
+ * @example SSF_CreateState(&test_state_flow, TEST_1, 1, false, entry_test_1, during_test_1, STATE_METHOD_NULL);
  * @note    无
  */
-stateflow_error EHSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
-                                 uint8_t number_of_exit_events, bool is_need_to_reset,
-                                 void (*entry)(stateflow_message_box_s_t *stateflow_msg),
-                                 void (*during)(stateflow_message_box_s_t *stateflow_msg),
-                                 void (*exit)(stateflow_message_box_s_t *stateflow_msg));
+stateflow_error SSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
+                                uint8_t number_of_exit_events, bool is_need_to_reset,
+                                void (*entry)(stateflow_message_box_s_t *stateflow_msg),
+                                void (*during)(stateflow_message_box_s_t *stateflow_msg),
+                                void (*exit)(stateflow_message_box_s_t *stateflow_msg));
 
 /**
- * @name    EHSF_StateAddExitEvent
+ * @name    SSF_StateAddExitEvent
  * @brief   为状态添加一个出口事件
  * @param stateflow     状态机结构体地址
  * @param state_name    所属状态的名称/枚举值
@@ -151,19 +166,21 @@ stateflow_error EHSF_CreateState(stateflow_s_t *stateflow, stateflow_state_table
  * @param priority      此出口事件的触发优先级
  * @param guard         此出口事件的检测方法
  * @return  stateflow_error
+ * @example SSF_StateAddExitEvent(&test_state_flow, TEST_1, TEST_2, 0, guard_test_1_to_test_2);
  * @note    无
  */
-stateflow_error EHSF_StateAddExitEvent(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
-                                       stateflow_state_table_e_t toward_state, uint8_t priority,
-                                       bool (*guard)(stateflow_message_box_s_t *stateflow_msg));
+stateflow_error SSF_StateAddExitEvent(stateflow_s_t *stateflow, stateflow_state_table_e_t state_name,
+                                      stateflow_state_table_e_t toward_state, uint8_t priority,
+                                      bool (*guard)(stateflow_message_box_s_t *stateflow_msg));
 
 /**
- * @name    EHSF_Step
+ * @name    SSF_Step
  * @brief   状态机执行一个步进周期
  * @param stateflow     状态机结构体地址
  * @return  void
+ * @example SSF_Step(&test_state_flow);
  * @note    无
  */
-void EHSF_Step(stateflow_s_t *stateflow);
+void SSF_Step(stateflow_s_t *stateflow);
 
 #endif /* __STATEFLOW_H_ */
